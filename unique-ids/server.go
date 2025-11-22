@@ -69,6 +69,7 @@ func (s *Server) generateHandler(msg maelstrom.Message) error {
 	}
 
 	s.counter++
+	log.Printf("Internal node counter incremented, current value: %d", s.counter)
 
 	return s.node.Reply(msg, generateMessageResponse)
 }
