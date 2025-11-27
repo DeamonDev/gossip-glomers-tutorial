@@ -3,6 +3,7 @@ go 1.25.4
 use (
 	./broadcast-3a
 	./broadcast-3b
+	./broadcast-3c
 	./echo
 	./unique-ids
 )
