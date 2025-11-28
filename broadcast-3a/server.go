@@ -16,10 +16,6 @@ type Server struct {
 	messages map[int]struct{}
 }
 
-type InitMessageResponse struct {
-	Type string `json:"type"`
-}
-
 type BroadcastMessage struct {
 	Type    string `json:"type"`
 	Message int    `json:"message"`
@@ -68,9 +64,7 @@ func (s *Server) initHandler(msg maelstrom.Message) error {
 
 	log.Printf("Node id set to: %s", s.nodeID)
 
-	initMessageResponse := InitMessageResponse{Type: "init_ok"}
-
-	return s.node.Reply(msg, initMessageResponse)
+	return nil
 }
 
 func (s *Server) broadcastHandler(msg maelstrom.Message) error {

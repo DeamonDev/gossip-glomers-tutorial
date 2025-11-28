@@ -12,10 +12,6 @@ type Server struct {
 	nodeID string
 }
 
-type InitMessageResponse struct {
-	Type string `json:"type"`
-}
-
 type EchoMessage struct {
 	Type  string `json:"type"`
 	MsgID int64  `json:"msg_id"`
@@ -47,9 +43,7 @@ func (s *Server) initHandler(msg maelstrom.Message) error {
 
 	log.Printf("Node id set to: %s", s.nodeID)
 
-	initMessageResponse := InitMessageResponse{Type: "init_ok"}
-
-	return s.node.Reply(msg, initMessageResponse)
+	return nil
 }
 
 func (s *Server) echoHandler(msg maelstrom.Message) error {

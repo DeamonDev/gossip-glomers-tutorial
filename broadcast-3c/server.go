@@ -23,10 +23,6 @@ type Server struct {
 	retryBackoff time.Duration
 }
 
-type InitMessageResponse struct {
-	Type string `json:"type"`
-}
-
 type BroadcastMessage struct {
 	Type    string `json:"type"`
 	Message int    `json:"message"`
@@ -69,6 +65,9 @@ func NewServer(n *maelstrom.Node) *Server {
 }
 
 func (s *Server) initHandler(msg maelstrom.Message) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var body maelstrom.InitMessageBody
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -87,12 +86,13 @@ func (s *Server) initHandler(msg maelstrom.Message) error {
 	s.peers = peers
 	log.Printf("Discovered cluster peers: %v", s.peers)
 
-	initMessageResponse := InitMessageResponse{Type: "init_ok"}
-
-	return s.node.Reply(msg, initMessageResponse)
+	return nil
 }
 
 func (s *Server) broadcastHandler(msg maelstrom.Message) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var body BroadcastMessage
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -106,9 +106,6 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 
 		return s.node.Reply(msg, broadcastMessageResponse)
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	s.messages[body.Message] = struct{}{}
 
