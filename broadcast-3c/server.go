@@ -18,9 +18,6 @@ type Server struct {
 
 	mu       sync.Mutex
 	messages map[int]struct{}
-
-	maxRetries   int
-	retryBackoff time.Duration
 }
 
 type BroadcastMessage struct {
