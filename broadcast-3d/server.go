@@ -14,10 +14,14 @@ import (
 type Server struct {
 	node   *maelstrom.Node
 	nodeID string
-	peers  []string
 
 	mu       sync.Mutex
 	messages map[int]struct{}
+
+	topology    map[string][]string
+	centralNode string
+
+	masterNode bool
 }
 
 type BroadcastMessage struct {
@@ -26,6 +30,15 @@ type BroadcastMessage struct {
 }
 
 type BroadcastMessageResponse struct {
+	Type string `json:"type"`
+}
+
+type BroadcastInternalMessage struct {
+	Type    string `json:"type"`
+	Message int    `json:"message"`
+}
+
+type BroadcastInternalMessageResponse struct {
 	Type string `json:"type"`
 }
 
@@ -52,11 +65,13 @@ func NewServer(n *maelstrom.Node) *Server {
 
 	s.node.Handle("init", s.initHandler)
 	s.node.Handle("broadcast", s.broadcastHandler)
+	s.node.Handle("broadcast_internal", s.broadcastInternalHandler)
 	s.node.Handle("read", s.readHandler)
 	s.node.Handle("topology", s.topologyHandler)
 
 	// no-op handlers
 	s.node.Handle("broadcast_ok", s.noOpHandler)
+	s.node.Handle("broadcast_internal_ok", s.noOpHandler)
 
 	return s
 }
@@ -72,16 +87,6 @@ func (s *Server) initHandler(msg maelstrom.Message) error {
 
 	s.nodeID = body.NodeID
 	log.Printf("Node id set to: %s", s.nodeID)
-
-	var peers []string
-	for _, peerID := range body.NodeIDs {
-		if peerID != s.nodeID {
-			peers = append(peers, peerID)
-		}
-	}
-
-	s.peers = peers
-	log.Printf("Discovered cluster peers: %v", s.peers)
 
 	return nil
 }
@@ -104,11 +109,25 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 		return s.node.Reply(msg, broadcastMessageResponse)
 	}
 
+	if !s.masterNode {
+		// Broadcast to the master node
+		go broadcastMessageToPeer(s.node, s.centralNode, body)
+
+		broadcastMessageResponse := BroadcastMessageResponse{
+			Type: "broadcast_ok",
+		}
+
+		return s.node.Reply(msg, broadcastMessageResponse)
+	}
+
 	s.messages[body.Message] = struct{}{}
 
-	// To avoid: n0->n0
-	for _, peerID := range s.peers {
-		go broadcastMessageToPeer(s.node, peerID, body)
+	for _, peerID := range s.topology[s.nodeID] {
+		broadcastInternalMessage := BroadcastInternalMessage{
+			Type:    "broadcast_internal",
+			Message: body.Message,
+		}
+		go broadcastMessageToPeer(s.node, peerID, broadcastInternalMessage)
 	}
 
 	broadcastMessageResponse := BroadcastMessageResponse{
@@ -118,7 +137,40 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 	return s.node.Reply(msg, broadcastMessageResponse)
 }
 
-func broadcastMessageToPeer(node *maelstrom.Node, peerID string, body BroadcastMessage) {
+func (s *Server) broadcastInternalHandler(msg maelstrom.Message) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var body BroadcastInternalMessage
+	if err := json.Unmarshal(msg.Body, &body); err != nil {
+		return err
+	}
+
+	// To avoid cycles: n0->n1->n2->n0
+	if _, exists := s.messages[body.Message]; exists {
+		broadcastInternalMessageResponse := BroadcastInternalMessageResponse{
+			Type: "broadcast_internal_ok",
+		}
+
+		return s.node.Reply(msg, broadcastInternalMessageResponse)
+	}
+
+	s.messages[body.Message] = struct{}{}
+
+	// To avoid: n0->n0
+	for _, peerID := range s.topology[s.nodeID] {
+		go broadcastMessageToPeer(s.node, peerID, body)
+	}
+
+	broadcastInternalMessageResponse := BroadcastInternalMessageResponse{
+		Type: "broadcast_internal_ok",
+	}
+
+	return s.node.Reply(msg, broadcastInternalMessageResponse)
+}
+
+func broadcastMessageToPeer(node *maelstrom.Node, peerID string, body any) {
+	backoff := time.Millisecond
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		_, err := node.SyncRPC(ctx, peerID, body)
@@ -128,7 +180,10 @@ func broadcastMessageToPeer(node *maelstrom.Node, peerID string, body BroadcastM
 			return
 		}
 
-		time.Sleep(time.Duration(rand.Intn(50)) * time.Millisecond)
+		time.Sleep(backoff + time.Duration(rand.Intn(50))*time.Millisecond)
+		if backoff < 500*time.Millisecond {
+			backoff *= 2
+		}
 	}
 }
 
@@ -159,6 +214,9 @@ func (s *Server) readHandler(msg maelstrom.Message) error {
 }
 
 func (s *Server) topologyHandler(msg maelstrom.Message) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var body TopologyMessage
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -170,6 +228,17 @@ func (s *Server) topologyHandler(msg maelstrom.Message) error {
 	}
 
 	log.Printf("Received topology information from controller: %v", body.Topology)
+
+	s.topology = topology
+	s.centralNode = centralNode
+
+	log.Printf("Using topology: %v, central node: %s", s.topology, s.centralNode)
+
+	if s.nodeID == centralNode {
+		s.masterNode = true
+	} else {
+		s.masterNode = false
+	}
 
 	return s.node.Reply(msg, topologyMessageResponse)
 }

@@ -4,6 +4,7 @@ use (
 	./broadcast-3a
 	./broadcast-3b
 	./broadcast-3c
+	./broadcast-3d
 	./echo
 	./unique-ids
 )
