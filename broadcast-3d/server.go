@@ -109,6 +109,16 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 		return s.node.Reply(msg, broadcastMessageResponse)
 	}
 
+	s.messages[body.Message] = struct{}{}
+
+	for _, peerID := range s.topology[s.nodeID] {
+		broadcastInternalMessage := BroadcastInternalMessage{
+			Type:    "broadcast_internal",
+			Message: body.Message,
+		}
+		go broadcastMessageToPeer(s.node, peerID, broadcastInternalMessage)
+	}
+
 	if !s.masterNode {
 		// Broadcast to the master node
 		go broadcastMessageToPeer(s.node, s.centralNode, body)
@@ -118,16 +128,6 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 		}
 
 		return s.node.Reply(msg, broadcastMessageResponse)
-	}
-
-	s.messages[body.Message] = struct{}{}
-
-	for _, peerID := range s.topology[s.nodeID] {
-		broadcastInternalMessage := BroadcastInternalMessage{
-			Type:    "broadcast_internal",
-			Message: body.Message,
-		}
-		go broadcastMessageToPeer(s.node, peerID, broadcastInternalMessage)
 	}
 
 	broadcastMessageResponse := BroadcastMessageResponse{
