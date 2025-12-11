@@ -18,8 +18,8 @@ type Server struct {
 	mu       sync.Mutex
 	messages map[int]struct{}
 
-	topology    map[string][]string
-	centralNode string
+	topology   map[string][]string
+	masterNode string
 
 	role string
 }
@@ -122,7 +122,7 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 
 	if s.role == "FOLLOWER" {
 		// Broadcast to the master node
-		go broadcastMessageToPeer(s.node, s.centralNode, broadcastInternalMessage)
+		go broadcastMessageToPeer(s.node, s.masterNode, broadcastInternalMessage)
 	}
 
 	broadcastMessageResponse := BroadcastMessageResponse{
@@ -225,11 +225,11 @@ func (s *Server) topologyHandler(msg maelstrom.Message) error {
 	log.Printf("Received topology information from controller: %v", body.Topology)
 
 	s.topology = topology
-	s.centralNode = centralNode
+	s.masterNode = masterNode
 
-	log.Printf("Using topology: %v, central node: %s", s.topology, s.centralNode)
+	log.Printf("Using topology: %v, central node: %s", s.topology, s.masterNode)
 
-	if s.nodeID == centralNode {
+	if s.nodeID == masterNode {
 		s.role = "LEADER"
 	} else {
 		s.role = "FOLLOWER"

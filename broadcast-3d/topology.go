@@ -29,4 +29,4 @@ var topology = map[string][]string{
 }
 
 // It is hardcoded, in a real system it should be dynamic
-var centralNode = "n12"
+var masterNode = "n12"
