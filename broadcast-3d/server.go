@@ -21,7 +21,7 @@ type Server struct {
 	topology    map[string][]string
 	centralNode string
 
-	masterNode bool
+	role string
 }
 
 type BroadcastMessage struct {
@@ -120,7 +120,7 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 		go broadcastMessageToPeer(s.node, peerID, broadcastInternalMessage)
 	}
 
-	if !s.masterNode {
+	if s.role == "FOLLOWER" {
 		// Broadcast to the master node
 		go broadcastMessageToPeer(s.node, s.centralNode, broadcastInternalMessage)
 	}
@@ -230,9 +230,9 @@ func (s *Server) topologyHandler(msg maelstrom.Message) error {
 	log.Printf("Using topology: %v, central node: %s", s.topology, s.centralNode)
 
 	if s.nodeID == centralNode {
-		s.masterNode = true
+		s.role = "LEADER"
 	} else {
-		s.masterNode = false
+		s.role = "FOLLOWER"
 	}
 
 	return s.node.Reply(msg, topologyMessageResponse)
