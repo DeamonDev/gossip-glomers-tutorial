@@ -63,7 +63,8 @@ type ReadMessageResponse struct {
 }
 
 func NewServer(n *maelstrom.Node) *Server {
-	s := &Server{node: n, messages: make(map[int]struct{})}
+	b := NewBatcher(100 * time.Millisecond)
+	s := &Server{node: n, messages: make(map[int]struct{}), batcher: b}
 
 	s.node.Handle("init", s.initHandler)
 	s.node.Handle("broadcast", s.broadcastHandler)
@@ -74,8 +75,6 @@ func NewServer(n *maelstrom.Node) *Server {
 	// no-op handlers
 	s.node.Handle("broadcast_ok", s.noOpHandler)
 	s.node.Handle("broadcast_internal_ok", s.noOpHandler)
-
-	go s.handleFlushes()
 
 	return s
 }
@@ -253,5 +252,14 @@ func (s *Server) topologyHandler(msg maelstrom.Message) error {
 }
 
 func (s *Server) Run() error {
+
+	go s.handleFlushes()
+
+	go s.batcher.run()
+
 	return s.node.Run()
+}
+
+func (s *Server) Close() {
+	s.batcher.Close()
 }

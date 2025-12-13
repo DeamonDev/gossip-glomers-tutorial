@@ -13,6 +13,7 @@ func main() {
 	n := maelstrom.NewNode()
 
 	s := NewServer(n)
+	defer s.Close()
 
 	if err := s.Run(); err != nil {
 		log.Fatal(err)
