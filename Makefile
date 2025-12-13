@@ -1,4 +1,4 @@
-MODULE = broadcast-3d
+MODULE = broadcast-3e
 BINARY = ~/go/bin/maelstrom-$(MODULE)
 
 WORKLOAD = broadcast-3de

@@ -124,18 +124,13 @@ func (s *Server) broadcastHandler(msg maelstrom.Message) error {
 
 	s.messages[body.Message] = struct{}{}
 
-	broadcastInternalMessage := BroadcastInternalMessage{
-		Type:    "broadcast_internal",
-		Message: body.Message,
-	}
-
 	for _, peerID := range s.topology[s.nodeID] {
-		go broadcastMessageToPeer(s.node, peerID, broadcastInternalMessage)
+		s.batcher.Add(peerID, body.Message)
 	}
 
 	if s.role == "FOLLOWER" {
 		// Broadcast to the master node
-		go broadcastMessageToPeer(s.node, s.masterNode, broadcastInternalMessage)
+		s.batcher.Add(s.masterNode, body.Message)
 	}
 
 	broadcastMessageResponse := BroadcastMessageResponse{
@@ -255,11 +250,13 @@ func (s *Server) Run() error {
 
 	go s.handleFlushes()
 
-	go s.batcher.run()
+	go s.batcher.Run()
 
 	return s.node.Run()
 }
 
 func (s *Server) Close() {
+	log.Printf("Closing server")
+
 	s.batcher.Close()
 }

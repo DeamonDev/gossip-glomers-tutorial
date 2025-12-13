@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -25,7 +26,7 @@ func NewBatcher(batchTimeout time.Duration) *Batcher {
 	}
 }
 
-func (b *Batcher) run() {
+func (b *Batcher) Run() {
 	for range b.ticker.C {
 		b.mu.Lock()
 		for peerID, messages := range b.batches {
@@ -41,7 +42,15 @@ func (b *Batcher) run() {
 	}
 }
 
+func (b *Batcher) Add(peerID string, message int) {
+	b.mu.Lock()
+	b.batches[peerID] = append(b.batches[peerID], message)
+	b.mu.Unlock()
+}
+
 func (b *Batcher) Close() {
+	log.Printf("Closing batcher")
+
 	b.ticker.Stop()
 	close(b.flushChan)
 }
