@@ -36,8 +36,8 @@ type BroadcastMessageResponse struct {
 }
 
 type BroadcastInternalMessage struct {
-	Type    string `json:"type"`
-	Message int    `json:"message"`
+	Type     string `json:"type"`
+	Messages []int  `json:"messages"`
 }
 
 type BroadcastInternalMessageResponse struct {
@@ -63,7 +63,7 @@ type ReadMessageResponse struct {
 }
 
 func NewServer(n *maelstrom.Node) *Server {
-	b := NewBatcher(100 * time.Millisecond)
+	b := NewBatcher(200 * time.Millisecond)
 	s := &Server{node: n, messages: make(map[int]struct{}), batcher: b}
 
 	s.node.Handle("init", s.initHandler)
@@ -82,8 +82,8 @@ func NewServer(n *maelstrom.Node) *Server {
 func (s *Server) handleFlushes() {
 	for event := range s.batcher.flushChan {
 		msg := BroadcastInternalMessage{
-			Type:    "broadcast_internal",
-			Message: 0,
+			Type:     "broadcast_internal",
+			Messages: event.Messages,
 		}
 		go broadcastMessageToPeer(s.node, event.PeerID, msg)
 	}
@@ -149,8 +149,16 @@ func (s *Server) broadcastInternalHandler(msg maelstrom.Message) error {
 		return err
 	}
 
-	// To avoid cycles: n0->n1->n2->n0
-	if _, exists := s.messages[body.Message]; exists {
+	var unseenMessages []int
+
+	for _, m := range body.Messages {
+		if _, exists := s.messages[m]; !exists {
+			unseenMessages = append(unseenMessages, m)
+			s.messages[m] = struct{}{}
+		}
+	}
+
+	if len(unseenMessages) == 0 {
 		broadcastInternalMessageResponse := BroadcastInternalMessageResponse{
 			Type: "broadcast_internal_ok",
 		}
@@ -158,11 +166,10 @@ func (s *Server) broadcastInternalHandler(msg maelstrom.Message) error {
 		return s.node.Reply(msg, broadcastInternalMessageResponse)
 	}
 
-	s.messages[body.Message] = struct{}{}
-
-	// To avoid: n0->n0
-	for _, peerID := range s.topology[s.nodeID] {
-		go broadcastMessageToPeer(s.node, peerID, body)
+	for _, m := range unseenMessages {
+		for _, peerID := range s.topology[s.nodeID] {
+			s.batcher.Add(peerID, m)
+		}
 	}
 
 	broadcastInternalMessageResponse := BroadcastInternalMessageResponse{
@@ -247,9 +254,7 @@ func (s *Server) topologyHandler(msg maelstrom.Message) error {
 }
 
 func (s *Server) Run() error {
-
 	go s.handleFlushes()
-
 	go s.batcher.Run()
 
 	return s.node.Run()

@@ -22,7 +22,7 @@ func NewBatcher(batchTimeout time.Duration) *Batcher {
 	return &Batcher{
 		ticker:    time.NewTicker(batchTimeout),
 		batches:   make(map[string][]int),
-		flushChan: make(chan FlushEvent, 100),
+		flushChan: make(chan FlushEvent),
 	}
 }
 
