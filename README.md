@@ -15,9 +15,9 @@ Then, when you adjust the `Makefile` (depending on where you installed `maelstro
 challenges after setting proper `MODULE` and `WORKLOAD` make's variables. For example: 
 
 ```shell
-MODULE=broadcast-3e
-WORKLOAD=broadcast-3de
-make run
+# MODULE=broadcast-3e
+# WORKLOAD=broadcast-3de
+❯ make run
 ```
 
 will run code under `./broadcast-3b` with workload prescribed in: https://fly.io/dist-sys/3c/
