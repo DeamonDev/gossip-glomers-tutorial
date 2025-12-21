@@ -1,7 +1,7 @@
-MODULE = unique-ids
+MODULE = broadcast-3a
 BINARY = ~/go/bin/maelstrom-$(MODULE)
 
-WORKLOAD = unique-ids
+WORKLOAD = broadcast-3a
 
 MAELSTROM_CMD_echo = maelstrom/maelstrom test -w echo --bin $(BINARY) --node-count 1 --time-limit 10
 MAELSTROM_CMD_unique-ids = maelstrom/maelstrom test -w unique-ids --bin $(BINARY) --time-limit 30 --rate 1000 --node-count 3 --availability total --nemesis partition
