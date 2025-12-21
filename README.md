@@ -15,8 +15,8 @@ Then, when you adjust the `Makefile` (depending on where you installed `maelstro
 challenges after setting proper `MODULE` and `WORKLOAD` make's variables. For example: 
 
 ```shell
-# MODULE=broadcast-3e
-# WORKLOAD=broadcast-3de
+# MODULE=broadcast-3b
+# WORKLOAD=broadcast-3c
 ❯ make run
 ```
 
