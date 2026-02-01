@@ -20,4 +20,4 @@ challenges after setting proper `MODULE` and `WORKLOAD` make's variables. For ex
 ❯ make run
 ```
 
-will run code under `./broadcast-3b` with workload prescribed in: https://fly.io/dist-sys/3c/
+will run code under `./broadcast-3b` with workload prescribed as in: https://fly.io/dist-sys/3c/
