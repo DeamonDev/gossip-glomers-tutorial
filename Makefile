@@ -1,7 +1,7 @@
-MODULE = broadcast-3a
+MODULE = grow-only-counter
 BINARY = ~/go/bin/maelstrom-$(MODULE)
 
-WORKLOAD = broadcast-3a
+WORKLOAD = grow_only_counter
 
 MAELSTROM_CMD_echo = maelstrom/maelstrom test -w echo --bin $(BINARY) --node-count 1 --time-limit 10
 MAELSTROM_CMD_unique-ids = maelstrom/maelstrom test -w unique-ids --bin $(BINARY) --time-limit 30 --rate 1000 --node-count 3 --availability total --nemesis partition
@@ -9,6 +9,7 @@ MAELSTROM_CMD_broadcast-3a = maelstrom/maelstrom test -w broadcast --bin $(BINAR
 MAELSTROM_CMD_broadcast-3b = maelstrom/maelstrom test -w broadcast --bin $(BINARY) --node-count 5 --time-limit 20 --rate 10
 MAELSTROM_CMD_broadcast-3c = maelstrom/maelstrom test -w broadcast --bin $(BINARY) --node-count 5 --time-limit 20 --rate 10 --nemesis partition
 MAELSTROM_CMD_broadcast-3de = maelstrom/maelstrom test -w broadcast --bin $(BINARY) --node-count 25 --time-limit 20 --rate 100 --latency 100
+MAELSTROM_CMD_grow_only_counter = maelstrom/maelstrom test -w g-counter --bin $(BINARY) --node-count 3 --rate 100 --time-limit 20 --nemesis partition
 
 MAELSTROM_RUN_CMD = $(MAELSTROM_CMD_$(WORKLOAD))
 

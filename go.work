@@ -1,4 +1,4 @@
-go 1.25.4
+go 1.26.3
 
 use (
 	./broadcast-3a
@@ -7,5 +7,6 @@ use (
 	./broadcast-3d
 	./broadcast-3e
 	./echo
+	./grow-only-counter
 	./unique-ids
 )
